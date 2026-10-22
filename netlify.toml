@@ -1,7 +1,13 @@
 [build]
-  command = "node build.mjs"
-  publish = "dist"
+  publish = "."
+  command = ""
+
 [[headers]]
-  for = "/*.html"
+  for = "/*.js"
   [headers.values]
-    X-Content-Type-Options = "nosniff"
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-store"
