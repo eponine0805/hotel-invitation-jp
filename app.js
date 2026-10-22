@@ -34,7 +34,7 @@ function hero(kicker,title,desc){return `<div class="hero"><div class="eyebrow">
 function render(){sounds=[];document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===ui.page||(ui.page==='lesson'&&b.dataset.tab==='learn')||(ui.page==='quiz'&&b.dataset.tab==='test')));
  if(ui.page==='learn')renderHome();else if(ui.page==='lesson')renderLesson();else if(ui.page==='test')renderTest();else if(ui.page==='quiz')renderQuiz();else if(ui.page==='review')renderReview();else if(ui.page==='phrases')renderPhrases();else if(ui.page==='sim')renderSim();else if(ui.page==='settings')renderSettings();
 }
-function renderHome(){controls('');const s=stats();main.innerHTML=`${hero('APPLIED JAPANESE · COURSE 01','応用対話演習・夜間課程','デート終盤の対話を対象に、目的の伝達、応答の解釈、適切な会話の終了について学びます。全10章・200問。')}
+function renderHome(){controls('');const s=stats();main.innerHTML=`${hero('APPLIED JAPANESE · COURSE 01','応用対話演習・夜間課程','デート終盤にホテルへの同行を提案する際の日本語表現を、場面別に学習します。全10章・200問。')}
 <div class="mockSeal"><span>実用日本語研究室｜対人場面別会話研究</span><strong>研究対象：宿泊施設への同行を提案する場面の日本語</strong><small>対象：成人同士の自由な意思決定が可能な会話。公的な教育機関・資格制度とは関係ありません。</small></div>
 <div class="metrics"><div><b>${s.n}<small> / ${s.total}</small></b><span>履修済み講義</span></div><div><b>${s.solved}</b><span>演習回答数</span></div><div><b>${state.wrong.length}</b><span>再提出</span></div></div>
 <div class="noteBox"><span class="noteIcon">◇</span><p>双方が成人で、お互いに自由な意思で話せることが前提です。この教材は相手の気持ちを操作するためではなく、誤解や圧力を避けて会話するための練習です。</p></div>
