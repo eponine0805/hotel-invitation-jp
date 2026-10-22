@@ -2,7 +2,7 @@ name: Expand application sources
 on:
   push:
     branches: [main]
-    paths: ['archive/**', 'build.mjs', '.github/workflows/expand.yml']
+    paths: ['archive/**']
   workflow_dispatch:
 permissions:
   contents: write
