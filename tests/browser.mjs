@@ -53,7 +53,7 @@ try {
  for(let n=0;n<10;n++)await page.locator('[data-sim-choice="0"]').click();
  await page.locator('#simResult').waitFor();
  assert.equal(Number(await page.locator('.simGrade strong').innerText()),100,'Ideal answers must score 100');
- await page.locator('[data-sim-back]').click();
+ await page.locator('[data-sim-back]').last().click();
  await page.locator('[data-sim="s02"]').click();
  await page.locator('[data-sim-choice="2"]').click();
  assert.match(await stage.innerText(),/まだ二回目だよ/);
@@ -61,7 +61,7 @@ try {
  assert.doesNotMatch(await stage.innerText(),/今の言い方、ちょっと困った/);
  await page.locator('[data-sim-choice="1"]').click();
  assert.match(await page.locator('#simThread').innerText(),/立場|二回目|親しさ|分かり合える|取り違え|思って|先回り|伝わる/);
- await page.locator('[data-sim-back]').click();
+ await page.locator('[data-sim-back]').last().click();
  await page.locator('[data-sim="s15"]').click();
  await page.locator('[data-sim-choice="2"]').click();
  assert.match(await stage.innerText(),/仕事とは別ですよね/);
