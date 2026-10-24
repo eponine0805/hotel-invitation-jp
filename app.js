@@ -170,7 +170,7 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    const frag=document.createElement('div');
    frag.className='simExchange';
    frag.innerHTML='<div class="chat partner"><span>相手</span><p>'+safe(h.partner)+'</p></div>'+
-     '<div class="chat self"><span>あなた</span><p>「'+safe(h.say)+'」</p></div>'+
+     '<div class="chat self"><span>あなた</span><p>「'+safe(h.say)+'」</p>'+audioButton(h.say,'▶ 発言を聞く')+'</div>'+
      '<div class="chat partner"><span>相手</span><p>'+safe(h.response)+'</p></div>'+
      '<div class="coach '+((h.rating===0||h.rating===-1)?'attention':'')+'"><strong>'+classification+'</strong><p>'+safe(h.feedback)+'</p></div>';
    thread.appendChild(frag);
