@@ -8,7 +8,9 @@ const validRate=v=>Number.isFinite(Number(v))&&Number(v)>=.5&&Number(v)<=1.3?Num
 const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY));if(!v||typeof v!=='object')return{};return v;}catch{return {};}};
 const saved=load();
 const state={passed:saved.passed&&typeof saved.passed==='object'?saved.passed:{},wrong:Array.isArray(saved.wrong)?saved.wrong:[],history:Array.isArray(saved.history)?saved.history:[],rate:validRate(saved.rate)};
-const ui={page:'learn',lesson:null,quiz:null,simId:null,step:0,simHistory:[],simEnd:null,phraseCat:'すべて',phraseQuery:'',settingsBack:'learn'};
+const ui={page:'learn',lesson:null,quiz:null,simId:null,sim:null,step:0,simHistory:[],simEnd:null,phraseCat:'すべて',phraseQuery:'',settingsBack:'learn'};
+state.simRecords=saved.simRecords&&typeof saved.simRecords==='object'?saved.simRecords:{};
+state.simDraft=saved.simDraft&&typeof saved.simDraft==='object'?saved.simDraft:null;
 let sounds=[],toastTimer=null;
 const store=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch{notify('進捗の保存に失敗しました。プライベートモード等をご確認ください。');}};
 function notify(s){const el=$('#toast');el.textContent=s;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
@@ -78,19 +80,139 @@ function phraseItems(){return PHRASES.filter(p=>(ui.phraseCat==='すべて'||p[0
 function phraseHTML(){return phraseItems().map(p=>`<article class="phrase"><span class="tag">${escapeHTML(p[0])}</span><p>${escapeHTML(p[1])}</p><div class="phraseFoot"><small>${escapeHTML(p[2])}</small><div class="phraseBtns">${audioButton(p[1],'▶ 聞く')}<button class="copy" data-copy="${escapeHTML(p[1])}">コピー</button></div></div></article>`).join('')||'<div class="empty"><p>一致するフレーズがありません。</p></div>';}
 function renderPhrases(){controls('');const cats=['すべて',...new Set(PHRASES.map(p=>p[0]))];main.innerHTML=`${hero('FIELD REFERENCE','実地で使う日本語・資料集','場面に応じて使える表現例です。実際には自分の話し方と関係性に合わせて調整してください。')}
 <div class="phraseSearch"><input id="phraseSearch" type="search" autocomplete="off" placeholder="例：ホテル / 帰る / ありがとう" value="${escapeHTML(ui.phraseQuery)}" aria-label="フレーズを検索"><div class="filterChips">${cats.map(c=>`<button class="filter ${ui.phraseCat===c?'active':''}" data-filter="${escapeHTML(c)}">${escapeHTML(c)}</button>`).join('')}</div></div><div id="phraseResults" class="phraseGrid">${phraseHTML()}</div>`;}
-function simSelect(id){ui.simId=id;ui.step=0;ui.simHistory=[];ui.simEnd=null;render();up();}
-function simChoice(i){const sim=SIMULATIONS.find(s=>s.id===ui.simId),turn=sim?.messages[ui.step],opt=turn?.options[i];if(!opt)return;
-ui.simHistory.push({partner:turn.partner,say:opt[0],response:opt[1],feedback:opt[2],correct:opt[3]!==-1});
-if(opt[3]===-1)ui.simEnd='stop';else if(opt[3]===2||ui.step===sim.messages.length-1)ui.simEnd='complete';else ui.step++;
-render();up();}
-function renderSim(){controls('');if(!ui.simId){main.innerHTML=`${hero('FIELD EXPERIMENT','会話シミュレーション','会話の展開に応じて選択肢を選びます。評価対象は承諾の獲得ではなく、意思確認と状況に合った応答です。')}
-<div class="noteBox"><span class="noteIcon">◉</span><p>架空の状況を用いた演習です。実際の返答は人や関係性によって異なります。</p></div><div class="sectionHead"><h2>6つの練習場面</h2></div><div class="lessonList">${SIMULATIONS.map((s,i)=>`<button class="lessonTile" data-sim="${s.id}"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="flex"><strong>${escapeHTML(s.title)}</strong><small>${escapeHTML(s.desc)}</small></span><span class="finish">›</span></button>`).join('')}</div>`;return;}
- const sim=SIMULATIONS.find(s=>s.id===ui.simId);if(!sim)return go('sim',{simId:null});let h=`<button class="back" data-sim-back>← シナリオ一覧</button>${hero('DIALOGUE PRACTICE',sim.title,sim.desc)}<div class="conversation">`;
- for(const item of ui.simHistory)h+=`<div class="chat partner"><span>相手</span><p>${escapeHTML(item.partner)}</p></div><div class="chat self"><span>あなた</span><p>「${escapeHTML(item.say)}」</p></div><div class="chat partner"><span>相手</span><p>${escapeHTML(item.response)}</p></div><div class="coach ${item.correct?'':'attention'}"><strong>${item.correct?'解説：適切な応答':'解説：再検討が必要'}</strong><p>${escapeHTML(item.feedback)}</p>${audioButton(item.say,'▶ 自分の返答を聞く')}</div>`;
- if(ui.simEnd){h+=`</div><div class="endBanner"><h2>${ui.simEnd==='complete'?'演習終了':'演習を終了しました'}</h2><p>${ui.simEnd==='complete'?'会話の流れに沿った判断ができました。現実には相手の反応を都度確かめてください。':'相手が自由に選べる条件を確認し、別の返答を検討してください。'}</p><div class="endButtons"><button class="cta" data-sim-retry>最初からやり直す</button><button class="softBtn" data-sim-back>他のシナリオ</button></div></div>`;}
- else {let msg=sim.messages[ui.step];h+=`<div class="chat partner"><span>相手</span><p>${escapeHTML(msg.partner)}</p></div></div><div class="choicePanel"><div class="eyebrow">YOU SAY</div><h2>どう返しますか？</h2><div class="options">${msg.options.map((opt,i)=>`<button class="option" data-sim-choice="${i}"><span class="optionIndex">${String.fromCharCode(65+i)}</span><span>${escapeHTML(opt[0])}</span></button>`).join('')}</div></div>`;}
- main.innerHTML=h;
-}
+const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の自然さ','断りへの対応'];
+ function simAxis(index){return SIM_AXES[index%SIM_AXES.length];}
+ function simNew(id){
+   const s=SIMULATIONS.find(v=>v.id===id);
+   if(!s)return null;
+   return {id,index:0,repair:false,repairFrom:null,history:[],total:0,axes:Object.fromEntries(SIM_AXES.map(k=>[k,{earned:0,max:0}])),errors:0,repairs:0,streak:0,ending:null,started:new Date().toISOString()};
+ }
+ function simLoadDraft(){
+   const d=state.simDraft;
+   if(!d||!SIMULATIONS.some(s=>s.id===d.id)||!Array.isArray(d.history)||!Number.isInteger(d.index)||d.index<0||d.index>20||!d.axes||typeof d.axes!=='object'||d.ending)return null;
+   return d;
+ }
+ function simSave(){
+   state.simDraft=ui.sim&&!ui.sim.ending?ui.sim:null;
+   store();
+ }
+ function simSelect(id,resume=false){
+   ui.sim=resume&&simLoadDraft()&&state.simDraft.id===id?JSON.parse(JSON.stringify(state.simDraft)):simNew(id);
+   if(!ui.sim){notify('演習データが見つかりません。');return;}
+   ui.simId=id;ui.page='sim';render();up();simSave();
+ }
+ function simRepairOptions(){
+   return [
+     ['ごめん。今の言い方はよくなかった。あなたの希望を優先したい。','「うん、そうしてほしい」','言い直して、相手の意思を改めて確認できました。',1],
+     ['言い方が悪かったかも。いったん話を戻していい？','「分かった。でも少し気になったよ」','説明はできましたが、相手への影響にも目を向けましょう。',0],
+     ['そういう意味じゃないから、気にしないで。','「気になったから言ったんだけど……」','発言の意図だけでなく、受け取られ方も考える必要があります。',-1]
+   ];
+ }
+ function simChoice(choiceIndex){
+   const z=ui.sim,s=SIMULATIONS.find(v=>v.id===ui.simId);
+   if(!z||!s||z.ending)return;
+   const isRepair=z.repair;
+   const beat=s.messages[z.index];
+   if(!beat)return;
+   const options=isRepair?simRepairOptions():beat.options;
+   const op=options[choiceIndex];if(!op)return;
+   const axis=simAxis(z.index);
+   const prompt=isRepair?'「今の言い方が少し気になった。どういう意味だった？」':beat.partner;
+   let rating=op[3];
+   let points=0;
+   if(isRepair){
+     if(rating===1){z.repairs++;z.streak=0;z.total+=1;z.axes[axis].earned+=1;points=1;}
+     else if(rating===0){z.streak=0;}
+     else{z.streak++;}
+     z.repair=false;
+     z.index++;
+     if(z.streak>=3)z.ending='withdrawn';
+   }else{
+     points=rating===3?3:rating===1?1:0;
+     z.total+=points;
+     z.axes[axis].earned+=points;
+     z.axes[axis].max+=3;
+     if(rating===0){z.errors++;z.streak++;z.repair=true;z.repairFrom=z.index;}
+     else {z.streak=0;z.index++;}
+   }
+   z.history.push({partner:prompt,say:op[0],response:op[1],feedback:op[2],rating,isRepair,axis,points});
+   if(!z.repair&&(z.index>=s.messages.length||z.ending))z.ending=z.ending||'finished';
+   if(z.ending){
+     state.simDraft=null;
+     state.simRecords=state.simRecords||{};
+     const score=simScore(z),prev=state.simRecords[z.id]||{};
+     state.simRecords[z.id]={last:score,best:Math.max(score,prev.best||0),attempts:(prev.attempts||0)+1,date:new Date().toISOString()};
+   }
+   simSave();
+   simAppendLatest(z.history[z.history.length-1]);
+   simPaintStage();
+   simPosition();
+ }
+ function simScore(z){
+   const s=SIMULATIONS.find(v=>v.id===z.id);
+   return Math.min(100,Math.max(0,Math.round(100*z.total/(s.messages.length*3))));
+ }
+ function simAppendLatest(h){
+   const thread=document.querySelector('#simThread');if(!thread)return;
+   const safe=escapeHTML;
+   const classification=h.isRepair?(h.rating===1?'修正できた返答':'再説明の余地あり'):(h.rating===3?'場面に適した返答':h.rating===1?'改善できる返答':'相手の反応を確認');
+   const frag=document.createElement('div');
+   frag.className='simExchange';
+   frag.innerHTML='<div class="chat partner"><span>相手</span><p>'+safe(h.partner)+'</p></div>'+
+     '<div class="chat self"><span>あなた</span><p>「'+safe(h.say)+'」</p></div>'+
+     '<div class="chat partner"><span>相手</span><p>'+safe(h.response)+'</p></div>'+
+     '<div class="coach '+((h.rating===0||h.rating===-1)?'attention':'')+'"><strong>'+classification+'</strong><p>'+safe(h.feedback)+'</p></div>';
+   thread.appendChild(frag);
+ }
+ function simPosition(){
+   const stage=document.querySelector('#simStage')||document.querySelector('#simResult');
+   if(!stage)return;
+   const focused=document.activeElement;
+   if(focused&&focused instanceof HTMLElement&&focused.tagName==='BUTTON')focused.blur();
+   requestAnimationFrame(()=>{
+     const target=stage.getBoundingClientRect();
+     const top=Math.max(0,window.scrollY+target.top-94);
+     window.scrollTo({top,behavior:'smooth'});
+   });
+ }
+ function simPaintStage(){
+   const z=ui.sim,s=SIMULATIONS.find(v=>v.id===ui.simId);
+   const stage=document.querySelector('#simStage'),meter=document.querySelector('#simMeter');
+   if(!stage||!s||!z)return;
+   const total=s.messages.length,answered=z.history.filter(h=>!h.isRepair).length;
+   if(meter)meter.innerHTML='<div class="between"><span>進行 '+Math.min(answered,total)+' / '+total+'</span><span>選択 '+z.history.length+' 回</span></div><div class="track"><i style="width:'+(100*answered/total)+'%"></i></div>';
+   if(z.ending){
+     const score=simScore(z),level=score>=85?'優良':score>=70?'良好':score>=50?'要改善':'再履修推奨';
+     const cls=z.ending==='withdrawn'?'対話が途中で終了しました':'演習修了';
+     const breakdown=SIM_AXES.map(axis=>{
+       const a=z.axes[axis]||{earned:0,max:0},n=a.max?Math.round(100*a.earned/a.max):0;
+       return '<div class="simAxis"><div class="between"><strong>'+axis+'</strong><span>'+n+'点</span></div><div class="track"><i style="width:'+n+'%"></i></div></div>';
+     }).join('');
+     stage.innerHTML='<section id="simResult" class="simResult"><div class="eyebrow">FIELD REPORT / '+s.id.toUpperCase()+'</div><h2>'+cls+'</h2><div class="simGrade"><strong>'+score+'</strong><span> / 100点</span></div><div class="simLevel">'+level+'</div><p class="simResultText">'+(z.ending==='withdrawn'?'言葉の選択が重なり、相手は会話を終える判断をしました。ここで引き止めず終了します。':'相手がホテルへ同行したかどうかではなく、提案の明確さと相手の意思への配慮を評価しました。')+'</p><div class="simAxisList">'+breakdown+'</div><div class="simResultStats"><span>本編回答 <b>'+answered+'</b> 件</span><span>不適切な返答 <b>'+z.errors+'</b> 件</span><span>言い直し成功 <b>'+z.repairs+'</b> 件</span></div><div class="simAdvice"><strong>振り返り</strong><p>'+(z.errors===0?'状況を丁寧に読み取れています。今度は別の場面も試してください。':z.repairs?'言い直しができたのは重要です。最初の返答で相手に負担をかけない方法も見直しましょう。':'相手の返答が曖昧な場面では、結論を急がず希望を聞くことが重要です。')+'</p></div><div class="endButtons"><button class="cta" data-sim-retry>このケースを再演習</button><button class="softBtn" data-sim-back>ケース一覧に戻る</button></div></section>';
+     return;
+   }
+   const repair=z.repair,beat=s.messages[z.index],options=repair?simRepairOptions():beat.options;
+   const question=repair?'「今の言い方が少し気になった。どういう意味だった？」':beat.partner;
+   stage.innerHTML='<div class="simCurrent"><div class="chat partner"><span>相手'+(repair?' · 確認':'')+'</span><p>'+escapeHTML(question)+'</p></div><div class="choicePanel"><div class="eyebrow">'+(repair?'REPAIR / 言い直し':'YOUR RESPONSE / '+String(z.index+1).padStart(2,'0'))+'</div><h2>'+(repair?'どう言い直しますか？':'どう返しますか？')+'</h2><div class="options">'+options.map((op,i)=>'<button class="option" data-sim-choice="'+i+'"><span class="optionIndex">'+String.fromCharCode(65+i)+'</span><span>'+escapeHTML(op[0])+'</span></button>').join('')+'</div></div></div>';
+ }
+ function renderSim(){
+   controls('');
+   if(!ui.simId||!ui.sim){
+     const d=simLoadDraft(),records=state.simRecords||{};
+     main.innerHTML=hero('FIELD PRACTICE','実地演習','会話の経過に応じて返答を選びます。間違えた場合も、言い直して関係を立て直す練習ができます。')+
+       '<div class="noteBox"><span class="noteIcon">◉</span><p>各ケース10場面、全16ケースで160の判断場面。結果は承諾の獲得ではなく、会話の明確さと意思の尊重により100点満点で評価します。</p></div>'+
+       (d?'<button class="resumeCard" data-sim-resume="'+escapeHTML(d.id)+'"><strong>前回の演習を続ける</strong><small>'+escapeHTML(SIMULATIONS.find(s=>s.id===d.id).title)+' · '+d.index+' / 10</small><span>再開 →</span></button>':'')+
+       '<div class="sectionHead"><h2>ケース別実地研修</h2><span class="subText">'+SIMULATIONS.length+'ケース・'+SIMULATIONS.reduce((n,s)=>n+s.messages.length,0)+'場面</span></div><div class="lessonList">'+SIMULATIONS.map((s,i)=>{
+         const r=records[s.id];return '<button class="lessonTile" data-sim="'+escapeHTML(s.id)+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><span class="flex"><strong>'+escapeHTML(s.title)+'</strong><small>'+escapeHTML(s.desc)+'</small><small class="simBest">'+(r?'自己最高 '+r.best+'点 · '+r.attempts+'回受講':'未受講')+'</small></span><span class="finish">›</span></button>';
+       }).join('')+'</div>';
+     return;
+   }
+   const s=SIMULATIONS.find(v=>v.id===ui.simId);
+   if(!s)return go('sim',{simId:null,sim:null});
+   main.innerHTML='<button class="back" data-sim-back>← ケース一覧</button>'+hero('FIELD PRACTICE / '+s.id.toUpperCase(),s.title,s.desc)+'<div id="simMeter" class="simMeter" aria-label="演習進捗"></div><div id="simThread" class="conversation" aria-label="会話履歴"></div><div id="simStage" tabindex="-1"></div>';
+   for(const h of ui.sim.history)simAppendLatest(h);
+   simPaintStage();
+ }
 function renderSettings(){controls('');main.innerHTML=`<button class="back" data-page="${escapeHTML(ui.settingsBack)}">← 戻る</button>${hero('AUDIO SETTINGS','読み上げ設定','例文の読み上げ速度を変更できます。日本語音声の品質は端末の読み上げエンジンに依存します。')}
 <div class="readingCard"><h3>読み上げ速度</h3><p class="subText">低い数値ほどゆっくりです。音の自然さは端末によって変わります。</p><div class="rateControls">${[.6,.7,.8,.9,1,1.1].map(r=>`<button data-rate="${r}" class="rate ${state.rate===r?'active':''}">${r.toFixed(1)}×</button>`).join('')}</div><div style="margin-top:20px">${audioButton('今日は一緒にいられて楽しかった。よかったら、もう少し話さない？','▶ 試聴する')}</div></div><div class="noteBox"><span class="noteIcon">♫</span><p>一部端末では日本語の音声がインストールされていないと再生されません。端末の読み上げ設定で日本語音声を有効にしてください。音声データはサーバーへ送信しません。</p></div>`;}
 main.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;
@@ -105,13 +227,14 @@ main.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)ret
  if(el.hasAttribute('data-copy')){const txt=el.dataset.copy;if(navigator.clipboard?.writeText)navigator.clipboard.writeText(txt).then(()=>notify('コピーしました')).catch(()=>notify('コピーできませんでした'));else{notify('この端末ではコピーできません。長押しで選択してください。');}return;}
  if(el.hasAttribute('data-filter')){ui.phraseCat=el.dataset.filter;renderPhrases();return;}
  if(el.hasAttribute('data-sim')){simSelect(el.dataset.sim);return;}
+ if(el.hasAttribute('data-sim-resume')){simSelect(el.dataset.simResume,true);return;}
  if(el.hasAttribute('data-sim-choice')){simChoice(Number(el.dataset.simChoice));return;}
  if(el.hasAttribute('data-sim-retry')){simSelect(ui.simId);return;}
- if(el.hasAttribute('data-sim-back')){ui.simId=null;render();up();return;}
+ if(el.hasAttribute('data-sim-back')){ui.simId=null;ui.sim=null;render();up();return;}
 });
 main.addEventListener('input',e=>{if(e.target.id==='phraseSearch'){ui.phraseQuery=e.target.value;const list=$('#phraseResults');if(list){sounds=[];list.innerHTML=phraseHTML();}}});
 bar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.startQuiz)startQuiz(b.dataset.startQuiz);else if(b.hasAttribute('data-next-quiz'))moveQuiz();else if(b.hasAttribute('data-retry'))startQuiz(ui.quiz?.mode||'all');});
-$('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;const page=b.dataset.tab;ui.quiz=null;ui.simId=null;go(page);});
+$('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;const page=b.dataset.tab;ui.quiz=null;ui.simId=null;ui.sim=null;go(page);});
 $('#voiceSettings').addEventListener('click',()=>{ui.settingsBack=ui.page==='lesson'?'learn':ui.page==='quiz'?'test':ui.page;go('settings');});
 // Safety guard: expected authoring structure and question counts.
 if(COURSE.some(c=>c.checks.length!==8||c.scenes.length!==6||buildQuestions(c).length!==20))notify('教材データの読み込みに問題があります。');
