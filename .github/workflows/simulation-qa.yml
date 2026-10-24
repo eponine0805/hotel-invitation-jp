@@ -27,3 +27,8 @@ jobs:
           test -s dist/simulations-v3.js
           test -s dist/app.js
           test -s dist/index.html
+      - name: Check UI in Chromium
+        run: |
+          npm install --no-save playwright-core@1.56.1
+          which google-chrome
+          node tests/browser.mjs
