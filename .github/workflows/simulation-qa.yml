@@ -21,3 +21,9 @@ jobs:
           node-version: '22'
       - run: node --check app.js && node --check content.js && node --check simulations-v3.js
       - run: node tests/simulation-check.mjs
+      - name: Verify actual Netlify output
+        run: |
+          node build.mjs
+          test -s dist/simulations-v3.js
+          test -s dist/app.js
+          test -s dist/index.html
