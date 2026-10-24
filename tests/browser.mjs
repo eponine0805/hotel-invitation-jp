@@ -31,10 +31,14 @@ try {
  const firstTop=await stage.evaluate(e=>e.getBoundingClientRect().top);
  await page.locator('[data-sim-choice="2"]').click();
  assert.match(await stage.innerText(),/言い直し/);
+ assert.match(await stage.innerText(),/そこまでは考えてなかったよ/);
+ assert.match(await stage.innerText(),/朝までって、話が飛びすぎたね/);
+ assert.equal(await stage.locator('[data-sim-choice]').count(),3);
  const afterBad=await stage.evaluate(e=>e.getBoundingClientRect().top);
  assert.ok(Math.abs(firstTop-afterBad)<50,'Wrong answer must not jump the question off screen');
  await page.locator('[data-sim-choice="0"]').click();
  assert.match(await stage.innerText(),/YOUR RESPONSE/);
+ assert.match(await page.locator('#simThread').innerText(),/今日は帰るつもりだったから/);
  const afterRepair=await stage.evaluate(e=>e.getBoundingClientRect().top);
  assert.ok(Math.abs(firstTop-afterRepair)<50,'Repair must preserve screen position');
  for(let n=1;n<10;n++)await page.locator('[data-sim-choice="0"]').click();
@@ -49,6 +53,21 @@ try {
  for(let n=0;n<10;n++)await page.locator('[data-sim-choice="0"]').click();
  await page.locator('#simResult').waitFor();
  assert.equal(Number(await page.locator('.simGrade strong').innerText()),100,'Ideal answers must score 100');
+ await page.locator('[data-sim-back]').click();
+ await page.locator('[data-sim="s02"]').click();
+ await page.locator('[data-sim-choice="2"]').click();
+ assert.match(await stage.innerText(),/まだ二回目だよ/);
+ assert.match(await stage.innerText(),/まだ二回目だった/);
+ assert.doesNotMatch(await stage.innerText(),/今の言い方、ちょっと困った/);
+ await page.locator('[data-sim-choice="1"]').click();
+ assert.match(await page.locator('#simThread').innerText(),/立場|二回目|親しさ|分かり合える|取り違え|思って|先回り|伝わる/);
+ await page.locator('[data-sim-back]').click();
+ await page.locator('[data-sim="s15"]').click();
+ await page.locator('[data-sim-choice="2"]').click();
+ assert.match(await stage.innerText(),/仕事とは別ですよね/);
+ assert.match(await stage.innerText(),/断りにくい誘い方/);
+ await page.locator('[data-sim-choice="0"]').click();
+ assert.match(await page.locator('#simThread').innerText(),/その方が助かります/);
  assert.deepEqual(errors,[],'No JavaScript exceptions');
- console.log('Browser QA passed: 16 cases, wrong-answer recovery, stable scroll, full scoring, retry, no JS errors.');
+ console.log('Browser QA passed: 16 cases, original bad-response prompts, distinct authored repairs (dating and workplace), stable scroll, scoring, retry, no JS errors.');
 } finally {await browser.close();await new Promise(ok=>server.close(ok));}
