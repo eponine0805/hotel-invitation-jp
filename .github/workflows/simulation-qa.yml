@@ -5,6 +5,8 @@ on:
     paths:
       - 'app.js'
       - 'simulations-v3.js'
+      - 'repair-dialogues.js'
+      - 'build.mjs'
       - 'content.js'
       - 'index.html'
       - 'sw.js'
@@ -19,12 +21,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check app.js && node --check content.js && node --check simulations-v3.js
+      - run: node --check app.js && node --check content.js && node --check simulations-v3.js && node --check repair-dialogues.js
       - run: node tests/simulation-check.mjs
       - name: Verify actual Netlify output
         run: |
           node build.mjs
           test -s dist/simulations-v3.js
+          test -s dist/repair-dialogues.js
           test -s dist/app.js
           test -s dist/index.html
       - name: Check UI in Chromium
