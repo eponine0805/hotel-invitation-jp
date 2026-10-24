@@ -89,7 +89,9 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
  }
  function simLoadDraft(){
    const d=state.simDraft;
-   if(!d||!SIMULATIONS.some(s=>s.id===d.id)||!Array.isArray(d.history)||!Number.isInteger(d.index)||d.index<0||d.index>20||!d.axes||typeof d.axes!=='object'||d.ending)return null;
+   if(!d||!Array.isArray(d.history)||!Number.isInteger(d.index)||!d.axes||typeof d.axes!=='object'||d.ending)return null;
+   const scenario=SIMULATIONS.find(s=>s.id===d.id);
+   if(!scenario||d.index<0||d.index>=scenario.messages.length||d.history.length>scenario.messages.length*2)return null;
    return d;
  }
  function simSave(){
@@ -120,6 +122,8 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    ];
  }
  function simChoice(choiceIndex){
+   const prevStage=document.querySelector('#simStage');
+   const previousTop=prevStage?prevStage.getBoundingClientRect().top:null;
    const z=ui.sim,s=SIMULATIONS.find(v=>v.id===ui.simId);
    if(!z||!s||z.ending)return;
    const isRepair=z.repair;
@@ -157,11 +161,11 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    simSave();
    simAppendLatest(z.history[z.history.length-1]);
    simPaintStage();
-   simPosition();
+   simPosition(previousTop);
  }
  function simScore(z){
    const s=SIMULATIONS.find(v=>v.id===z.id);
-   return Math.min(100,Math.max(0,Math.round(100*z.total/(s.messages.length*3))));
+   return s?Math.min(100,Math.max(0,Math.round(100*z.total/(s.messages.length*3)))):0;
  }
  function simAppendLatest(h){
    const thread=document.querySelector('#simThread');if(!thread)return;
@@ -175,15 +179,16 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
      '<div class="coach '+((h.rating===0||h.rating===-1)?'attention':'')+'"><strong>'+classification+'</strong><p>'+safe(h.feedback)+'</p></div>';
    thread.appendChild(frag);
  }
- function simPosition(){
-   const stage=document.querySelector('#simStage')||document.querySelector('#simResult');
+ function simPosition(previousTop){
+   const stage=document.querySelector('#simStage');
+   const thread=document.querySelector('#simThread');
    if(!stage)return;
-   const focused=document.activeElement;
-   if(focused&&focused instanceof HTMLElement&&focused.tagName==='BUTTON')focused.blur();
    requestAnimationFrame(()=>{
-     const target=stage.getBoundingClientRect();
-     const top=Math.max(0,window.scrollY+target.top-94);
-     window.scrollTo({top,behavior:'smooth'});
+     if(thread)thread.scrollTop=thread.scrollHeight;
+     if(previousTop!==null&&Number.isFinite(previousTop)){
+       const delta=stage.getBoundingClientRect().top-previousTop;
+       if(Math.abs(delta)>2)window.scrollBy({top:delta,behavior:'instant'});
+     }
    });
  }
  function simPaintStage(){
@@ -196,7 +201,7 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
      const score=simScore(z),level=score>=85?'優良':score>=70?'良好':score>=50?'要改善':'再履修推奨';
      const cls=z.ending==='withdrawn'?'対話が途中で終了しました':'演習修了';
      const breakdown=SIM_AXES.map(axis=>{
-       const a=z.axes[axis]||{earned:0,max:0},n=a.max?Math.round(100*a.earned/a.max):0;
+       const a=z.axes[axis]||{earned:0,max:0},n=a.max?Math.min(100,Math.max(0,Math.round(100*a.earned/a.max))):0;
        return '<div class="simAxis"><div class="between"><strong>'+axis+'</strong><span>'+n+'点</span></div><div class="track"><i style="width:'+n+'%"></i></div></div>';
      }).join('');
      stage.innerHTML='<section id="simResult" class="simResult"><div class="eyebrow">FIELD REPORT / '+s.id.toUpperCase()+'</div><h2>'+cls+'</h2><div class="simGrade"><strong>'+score+'</strong><span> / 100点</span></div><div class="simLevel">'+level+'</div><p class="simResultText">'+(z.ending==='withdrawn'?'言葉の選択が重なり、相手は会話を終える判断をしました。ここで引き止めず終了します。':'相手がホテルへ同行したかどうかではなく、提案の明確さと相手の意思への配慮を評価しました。')+'</p><div class="simAxisList">'+breakdown+'</div><div class="simResultStats"><span>本編回答 <b>'+answered+'</b> 件</span><span>不適切な返答 <b>'+z.errors+'</b> 件</span><span>言い直し成功 <b>'+z.repairs+'</b> 件</span></div><div class="simAdvice"><strong>振り返り</strong><p>'+(z.errors===0?'状況を丁寧に読み取れています。今度は別の場面も試してください。':z.repairs?'言い直しができたのは重要です。最初の返答で相手に負担をかけない方法も見直しましょう。':'相手の返答が曖昧な場面では、結論を急がず希望を聞くことが重要です。')+'</p></div><div class="endButtons"><button class="cta" data-sim-retry>このケースを再演習</button><button class="softBtn" data-sim-back>ケース一覧に戻る</button></div></section>';
