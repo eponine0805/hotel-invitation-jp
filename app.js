@@ -129,6 +129,7 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    const isRepair=z.repair;
    const beat=s.messages[z.index];
    if(!beat)return;
+   const decisionIndex=z.index;
    const options=isRepair?simRepairOptions(z):beat.options;
    const op=options[choiceIndex];if(!op)return;
    const axis=simAxis(z.index);
@@ -150,7 +151,7 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
      if(rating===0){z.errors++;z.streak++;z.repair=true;z.repairFrom=z.index;}
      else {z.streak=0;z.index++;}
    }
-   z.history.push({partner:prompt,say:op[0],response:op[1],feedback:op[2],rating,isRepair,axis,points});
+   z.history.push({partner:prompt,say:op[0],response:op[1],feedback:op[2],rating,isRepair,axis,points,step:decisionIndex});
    if(!z.repair&&(z.index>=s.messages.length||z.ending))z.ending=z.ending||'finished';
    if(z.ending){
      state.simDraft=null;
@@ -205,6 +206,12 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
        return '<div class="simAxis"><div class="between"><strong>'+axis+'</strong><span>'+n+'点</span></div><div class="track"><i style="width:'+n+'%"></i></div></div>';
      }).join('');
      stage.innerHTML='<section id="simResult" class="simResult"><div class="eyebrow">FIELD REPORT / '+s.id.toUpperCase()+'</div><h2>'+cls+'</h2><div class="simGrade"><strong>'+score+'</strong><span> / 100点</span></div><div class="simLevel">'+level+'</div><p class="simResultText">'+(z.ending==='withdrawn'?'言葉の選択が重なり、相手は会話を終える判断をしました。ここで引き止めず終了します。':'相手がホテルへ同行したかどうかではなく、提案の明確さと相手の意思への配慮を評価しました。')+'</p><div class="simAxisList">'+breakdown+'</div><div class="simResultStats"><span>本編回答 <b>'+answered+'</b> 件</span><span>不適切な返答 <b>'+z.errors+'</b> 件</span><span>言い直し成功 <b>'+z.repairs+'</b> 件</span></div><div class="simAdvice"><strong>振り返り</strong><p>'+(z.errors===0?'状況を丁寧に読み取れています。今度は別の場面も試してください。':z.repairs?'言い直しができたのは重要です。最初の返答で相手に負担をかけない方法も見直しましょう。':'相手の返答が曖昧な場面では、結論を急がず希望を聞くことが重要です。')+'</p></div><div class="endButtons"><button class="cta" data-sim-retry>このケースを再演習</button><button class="softBtn" data-sim-back>ケース一覧に戻る</button></div></section>';
+     const needsReview=z.history.filter(h=>!h.isRepair&&h.rating!==3).slice(0,8);
+     const reviewHtml=needsReview.length?'<section class="simReview"><h3>回答の振り返り</h3><p class="subText">判断を見直したい場面を抜粋しています。</p>'+needsReview.map(h=>{
+       const beat=s.messages[h.step],model=beat?.options?.[0]?.[0]||'相手の希望を聞いてから答える。';
+       return '<article class="simReviewItem"><span>場面 '+(Number.isInteger(h.step)?h.step+1:'—')+'</span><p><b>あなたの回答</b> '+escapeHTML(h.say)+'</p><p><b>考えたい返答</b> '+escapeHTML(model)+'</p><small>'+escapeHTML(h.feedback)+'</small></article>';
+     }).join('')+'</section>':'<section class="simReview"><h3>回答の振り返り</h3><p class="subText">各場面で相手の意思を尊重した返答ができています。</p></section>';
+     stage.innerHTML=stage.innerHTML.replace('<div class="endButtons">',reviewHtml+'<div class="endButtons">');
      return;
    }
    const repair=z.repair,beat=s.messages[z.index],options=repair?simRepairOptions(z):beat.options;
