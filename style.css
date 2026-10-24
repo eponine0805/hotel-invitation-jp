@@ -47,3 +47,10 @@
 .simResult .endButtons{grid-template-columns:1fr 1fr}
 @media(max-width:420px){.simResult{padding:18px 14px}.simResult .endButtons{grid-template-columns:1fr}.simGrade strong{font-size:64px}.simExchange{gap:10px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.track i{transition:none}}
+
+/* Field practice: keep the conversation transcript scrollable, not the entire page. */
+#simThread.conversation{height:clamp(170px,31dvh,290px);overflow-y:auto;overflow-x:hidden;display:block;overscroll-behavior:contain;scrollbar-gutter:stable;border:1px solid var(--line);border-radius:13px;padding:12px 14px;background:#f9fbfd;scroll-behavior:auto;}
+#simThread .simExchange{margin-bottom:17px;}
+#simStage{overflow-anchor:none;scroll-margin-top:68px;}
+#simThread:empty:before{content:'選択した返答と相手の反応がここに記録されます。';display:block;color:var(--muted);font-size:12px;padding:12px 4px;}
+@media(max-width:480px){#simThread.conversation{height:clamp(140px,25dvh,210px);padding:8px 10px;}.simCurrent .choicePanel{padding:15px 13px;}}
