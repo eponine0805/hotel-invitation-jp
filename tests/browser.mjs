@@ -1,0 +1,54 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, normalize, extname } from 'node:path';
+import { chromium } from 'playwright-core';
+
+const root=join(process.cwd(),'dist');
+const mimes={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
+const server=createServer((req,res)=>{
+ const p=normalize(decodeURIComponent(req.url.split('?')[0]||'/')).replace(/^\/+/, '')||'index.html';
+ const file=join(root,p);
+ if(!file.startsWith(root+'/')||!existsSync(file)){res.writeHead(404);res.end('Not found');return;}
+ res.setHeader('Content-Type',mimes[extname(file)]||'text/plain');
+ res.end(readFileSync(file));
+});
+await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
+const port=server.address().port;
+const browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
+const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+const errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+try {
+ await page.goto('http://127.0.0.1:'+port+'/',{waitUntil:'networkidle'});
+ await page.locator('[data-tab="sim"]').click();
+ assert.equal(await page.locator('[data-sim]').count(),16,'The UI must display all 16 cases');
+ const label=await page.locator('[data-sim]').first().innerText();
+ assert.match(label,/食事を終えた帰り道/);
+ await page.locator('[data-sim]').first().click();
+ await page.locator('#simStage').scrollIntoViewIfNeeded();
+ const stage=page.locator('#simStage');
+ const firstTop=await stage.evaluate(e=>e.getBoundingClientRect().top);
+ await page.locator('[data-sim-choice="2"]').click();
+ assert.match(await stage.innerText(),/言い直し/);
+ const afterBad=await stage.evaluate(e=>e.getBoundingClientRect().top);
+ assert.ok(Math.abs(firstTop-afterBad)<50,'Wrong answer must not jump the question off screen');
+ await page.locator('[data-sim-choice="0"]').click();
+ assert.match(await stage.innerText(),/YOUR RESPONSE/);
+ const afterRepair=await stage.evaluate(e=>e.getBoundingClientRect().top);
+ assert.ok(Math.abs(firstTop-afterRepair)<50,'Repair must preserve screen position');
+ for(let n=1;n<10;n++)await page.locator('[data-sim-choice="0"]').click();
+ await page.locator('#simResult').waitFor();
+ const result=await page.locator('#simResult').innerText();
+ assert.match(result,/100点/);
+ assert.match(result,/回答の振り返り/);
+ assert.match(result,/考えたい返答/);
+ const grade=Number(await page.locator('.simGrade strong').innerText());
+ assert.ok(grade>=0&&grade<100,'Wrong answer must reduce the final score');
+ await page.locator('[data-sim-retry]').click();
+ for(let n=0;n<10;n++)await page.locator('[data-sim-choice="0"]').click();
+ await page.locator('#simResult').waitFor();
+ assert.equal(Number(await page.locator('.simGrade strong').innerText()),100,'Ideal answers must score 100');
+ assert.deepEqual(errors,[],'No JavaScript exceptions');
+ console.log('Browser QA passed: 16 cases, wrong-answer recovery, stable scroll, full scoring, retry, no JS errors.');
+} finally {await browser.close();await new Promise(ok=>server.close(ok));}
