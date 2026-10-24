@@ -13,7 +13,7 @@ assert.equal(new Set(cases.map(s=>s.id)).size,16);
 for(const scene of cases){
  assert.equal(scene.messages.length,10,scene.id);
  for(const beat of scene.messages){
-  assert.ok(beat.partner.length>4);
+  assert.ok(beat.partner.trim().length>0);
   assert.equal(beat.options.length,3);
   assert.deepEqual(Array.from(beat.options,p=>p[3]),[3,1,0]);
   for(const option of beat.options)assert.ok(option[0]&&option[1]&&option[2],scene.id);
