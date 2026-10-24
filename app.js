@@ -101,11 +101,22 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    if(!ui.sim){notify('演習データが見つかりません。');return;}
    ui.simId=id;ui.page='sim';render();up();simSave();
  }
- function simRepairOptions(){
+ function simRepairProfile(z){
+   const last=[...z.history].reverse().find(h=>!h.isRepair);
+   const said=last?.say||'';
+   if(/既読|返事|返信|連絡|土曜|予定|空けて/.test(said))return {prompt:'「返事や予定は私にも都合があるんだけど」',good:'急かしたり、勝手に予定を決めたりしてごめん。返事は自分のペースで大丈夫。',reply:'「そうしてくれると助かる」'};
+   if(/評価|仕事|先輩|上司|残業|職場/.test(said))return {prompt:'「仕事の関係とは切り離して話してほしい」',good:'ごめん。仕事上の立場を使うような言い方だった。私的な話を無理に進めないよ。',reply:'「その方が安心します」'};
+   if(/電車|終電|バス|駅|帰|乗り場|降りて/.test(said))return {prompt:'「帰りたいっていう気持ち、伝わってる？」',good:'ごめん。帰る予定を邪魔するような言い方だった。帰れるようにしよう。',reply:'「ありがとう。そうしてほしい」'};
+   if(/ホテル|泊ま|部屋|予約|ここまで来た|流れ/.test(said))return {prompt:'「私はまだそれを決めたわけじゃないよ」',good:'ごめん。勝手に決まったことにするべきじゃなかった。君がどうしたいか聞かせて。',reply:'「うん、ちゃんと聞いてほしい」'};
+   if(/お礼|見返り|払う|頑張った|埋め合わせ/.test(said))return {prompt:'「それ、交換条件みたいに聞こえるけど」',good:'ごめん。見返りを求める言い方だった。そんな約束はいらないよ。',reply:'「それならよかった」'};
+   return {prompt:'「今の言い方、ちょっと困った。どういう意味？」',good:'ごめん。決めつけた言い方になってた。君の考えも聞かせて。',reply:'「そうしてもらえるとうれしい」'};
+ }
+ function simRepairOptions(z){
+   const p=simRepairProfile(z);
    return [
-     ['ごめん。今の言い方はよくなかった。あなたの希望を優先したい。','「うん、そうしてほしい」','言い直して、相手の意思を改めて確認できました。',1],
-     ['言い方が悪かったかも。いったん話を戻していい？','「分かった。でも少し気になったよ」','説明はできましたが、相手への影響にも目を向けましょう。',0],
-     ['そういう意味じゃないから、気にしないで。','「気になったから言ったんだけど……」','発言の意図だけでなく、受け取られ方も考える必要があります。',-1]
+     [p.good,p.reply,'前の発言を修正し、相手が自分の意思で判断できる状態に戻しました。',1],
+     ['言い方がよくなかった。いったん話を戻してもいい？','「分かった。でも少し気になったよ」','言い直す姿勢はありますが、相手が何に困ったのかも確認しましょう。',0],
+     ['そういう意味じゃないから、気にしないで。','「気になったから言ったんだけど……」','自分の意図だけではなく、相手がどう受け取ったかも重要です。',-1]
    ];
  }
  function simChoice(choiceIndex){
@@ -114,10 +125,10 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    const isRepair=z.repair;
    const beat=s.messages[z.index];
    if(!beat)return;
-   const options=isRepair?simRepairOptions():beat.options;
+   const options=isRepair?simRepairOptions(z):beat.options;
    const op=options[choiceIndex];if(!op)return;
    const axis=simAxis(z.index);
-   const prompt=isRepair?'「今の言い方が少し気になった。どういう意味だった？」':beat.partner;
+   const prompt=isRepair?simRepairProfile(z).prompt:beat.partner;
    let rating=op[3];
    let points=0;
    if(isRepair){
@@ -126,7 +137,7 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
      else{z.streak++;}
      z.repair=false;
      z.index++;
-     if(z.streak>=3)z.ending='withdrawn';
+     if(z.streak>=6)z.ending='withdrawn';
    }else{
      points=rating===3?3:rating===1?1:0;
      z.total+=points;
@@ -191,8 +202,8 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
      stage.innerHTML='<section id="simResult" class="simResult"><div class="eyebrow">FIELD REPORT / '+s.id.toUpperCase()+'</div><h2>'+cls+'</h2><div class="simGrade"><strong>'+score+'</strong><span> / 100点</span></div><div class="simLevel">'+level+'</div><p class="simResultText">'+(z.ending==='withdrawn'?'言葉の選択が重なり、相手は会話を終える判断をしました。ここで引き止めず終了します。':'相手がホテルへ同行したかどうかではなく、提案の明確さと相手の意思への配慮を評価しました。')+'</p><div class="simAxisList">'+breakdown+'</div><div class="simResultStats"><span>本編回答 <b>'+answered+'</b> 件</span><span>不適切な返答 <b>'+z.errors+'</b> 件</span><span>言い直し成功 <b>'+z.repairs+'</b> 件</span></div><div class="simAdvice"><strong>振り返り</strong><p>'+(z.errors===0?'状況を丁寧に読み取れています。今度は別の場面も試してください。':z.repairs?'言い直しができたのは重要です。最初の返答で相手に負担をかけない方法も見直しましょう。':'相手の返答が曖昧な場面では、結論を急がず希望を聞くことが重要です。')+'</p></div><div class="endButtons"><button class="cta" data-sim-retry>このケースを再演習</button><button class="softBtn" data-sim-back>ケース一覧に戻る</button></div></section>';
      return;
    }
-   const repair=z.repair,beat=s.messages[z.index],options=repair?simRepairOptions():beat.options;
-   const question=repair?'「今の言い方が少し気になった。どういう意味だった？」':beat.partner;
+   const repair=z.repair,beat=s.messages[z.index],options=repair?simRepairOptions(z):beat.options;
+   const question=repair?simRepairProfile(z).prompt:beat.partner;
    stage.innerHTML='<div class="simCurrent"><div class="chat partner"><span>相手'+(repair?' · 確認':'')+'</span><p>'+escapeHTML(question)+'</p></div><div class="choicePanel"><div class="eyebrow">'+(repair?'REPAIR / 言い直し':'YOUR RESPONSE / '+String(z.index+1).padStart(2,'0'))+'</div><h2>'+(repair?'どう言い直しますか？':'どう返しますか？')+'</h2><div class="options">'+options.map((op,i)=>'<button class="option" data-sim-choice="'+i+'"><span class="optionIndex">'+String.fromCharCode(65+i)+'</span><span>'+escapeHTML(op[0])+'</span></button>').join('')+'</div></div></div>';
  }
  function renderSim(){
