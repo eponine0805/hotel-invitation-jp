@@ -49,7 +49,7 @@ click({simChoice:'0'});
 assert.ok(els.get('#simStage').innerHTML.includes('YOUR RESPONSE'));
 assert.equal(scrollTopCalls,old,'repair must not scroll to start');
 for(let i=1;i<10;i++)click({simChoice:'0'});
-assert.ok(els.get('#simStage').innerHTML.includes('100点')===false); // first bad answer means below full marks
+assert.ok(!els.get('#simStage').innerHTML.includes('<strong>100</strong>')); // first bad answer means below full marks
 assert.ok(els.get('#simStage').innerHTML.includes('/ 100点'));
 assert.ok(els.get('#simStage').innerHTML.includes('不適切な返答'));
 click({simRetry:''});
