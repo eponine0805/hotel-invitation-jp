@@ -104,23 +104,22 @@ const SIM_AXES=['相手の意思','意図の明確さ','状況判断','会話の
    ui.simId=id;ui.page='sim';render();up();simSave();
  }
  function simRepairProfile(z){
+   const scene=SIMULATIONS.find(v=>v.id===z.id);
    const last=[...z.history].reverse().find(h=>!h.isRepair);
-   const said=last?.say||'';
-   if(/既読|返事|返信|連絡|土曜|予定|空けて/.test(said))return {prompt:'「返事や予定は私にも都合があるんだけど」',good:'急かしたり、勝手に予定を決めたりしてごめん。返事は自分のペースで大丈夫。',reply:'「そうしてくれると助かる」'};
-   if(/評価|仕事|先輩|上司|残業|職場/.test(said))return {prompt:'「仕事の関係とは切り離して話してほしい」',good:'ごめん。仕事上の立場を使うような言い方だった。私的な話を無理に進めないよ。',reply:'「その方が安心します」'};
-   if(/電車|終電|バス|駅|帰|乗り場|降りて/.test(said))return {prompt:'「帰りたいっていう気持ち、伝わってる？」',good:'ごめん。帰る予定を邪魔するような言い方だった。帰れるようにしよう。',reply:'「ありがとう。そうしてほしい」'};
-   if(/ホテル|泊ま|部屋|予約|ここまで来た|流れ/.test(said))return {prompt:'「私はまだそれを決めたわけじゃないよ」',good:'ごめん。勝手に決まったことにするべきじゃなかった。君がどうしたいか聞かせて。',reply:'「うん、ちゃんと聞いてほしい」'};
-   if(/お礼|見返り|払う|頑張った|埋め合わせ/.test(said))return {prompt:'「それ、交換条件みたいに聞こえるけど」',good:'ごめん。見返りを求める言い方だった。そんな約束はいらないよ。',reply:'「それならよかった」'};
-   return {prompt:'「今の言い方、ちょっと困った。どういう意味？」',good:'ごめん。決めつけた言い方になってた。君の考えも聞かせて。',reply:'「そうしてもらえるとうれしい」'};
+   const index=Number.isInteger(z.repairFrom)?z.repairFrom:z.index;
+   const repair=window.REPAIR_DIALOGUES?.[z.id]?.[index];
+   // The actual response to the learner's mistaken line is the only repair prompt.
+   // This avoids interpreting isolated keywords as the other person's intent.
+   const prompt=last?.response||'「さっきの話は、少し考えたい」';
+   if(repair&&Array.isArray(repair.options)&&repair.options.length===3)return {prompt,options:repair.options};
+   const baseline=scene?.messages[index]?.options?.[0]?.[0]||'相手の希望を尊重するよ。';
+   return {prompt,options:[
+     ['ごめん。'+baseline,'「うん、分かった」','前の言葉を修正しました。',1],
+     ['少し話しすぎたかもしれない。','「うん、聞いてほしかった」','一度、相手の希望を確認しましょう。',0],
+     ['でも、自分はそう思ったから。','「それだけでは納得できない」','相手の意思は優先されます。',-1]
+   ]};
  }
- function simRepairOptions(z){
-   const p=simRepairProfile(z);
-   return [
-     [p.good,p.reply,'前の発言を修正し、相手が自分の意思で判断できる状態に戻しました。',1],
-     ['言い方がよくなかった。いったん話を戻してもいい？','「分かった。でも少し気になったよ」','言い直す姿勢はありますが、相手が何に困ったのかも確認しましょう。',0],
-     ['そういう意味じゃないから、気にしないで。','「気になったから言ったんだけど……」','自分の意図だけではなく、相手がどう受け取ったかも重要です。',-1]
-   ];
- }
+ function simRepairOptions(z){return simRepairProfile(z).options;}
  function simChoice(choiceIndex){
    const prevStage=document.querySelector('#simStage');
    const previousTop=prevStage?prevStage.getBoundingClientRect().top:null;
