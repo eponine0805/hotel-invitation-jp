@@ -17,3 +17,33 @@
 .practiceBanner{background:var(--deep)}.audio{background:#edf2f7;border-color:#cfdeeb;color:#305c76}
 .nav{background:#f4f6f8f7}.num{background:#e9eef4;color:#315776}.finish{color:#44647a}
 .eyebrow{color:#416582}.logo small{color:#71808c}
+
+/* Simulation laboratory 3.0: continuous dialogue, five-axis review */
+.simMeter{border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 17px 5px;margin:3px 0 19px;font-size:12px;font-weight:800;color:#42617b}
+.simMeter .track{margin:11px 0 8px}
+.simExchange{display:grid;gap:13px;margin-bottom:15px}
+.simExchange .coach{margin-bottom:4px;max-width:100%;line-height:1.75}
+.simCurrent{display:grid;gap:15px}
+.simCurrent>.chat.partner{margin-bottom:0}
+#simStage{scroll-margin-top:100px;outline:none}
+.simBest{display:block;color:var(--ok)!important;margin-top:7px;font-weight:700}
+.resumeCard{width:100%;border:1px solid #a8bdce;border-radius:13px;background:#e9f2f7;padding:17px;text-align:left;display:grid;gap:5px;color:#213d55;margin:12px 0 22px}
+.resumeCard strong{font-size:15px}.resumeCard small{font-size:12px;line-height:1.6}.resumeCard span{justify-self:end;font-size:12px;font-weight:800}
+.simResult{padding:26px 20px;margin:12px 0 35px;background:#fff;border:1px solid var(--line);border-radius:17px}
+.simResult h2{margin:10px 0;color:var(--deep)}
+.simGrade{text-align:center;margin:22px 0 1px;line-height:1}
+.simGrade strong{font-size:76px;letter-spacing:-.07em;color:var(--deep);font-variant-numeric:tabular-nums}
+.simGrade span{font-size:18px;color:var(--muted)}
+.simLevel{text-align:center;color:var(--deep);font-weight:750;font-size:15px;margin:7px 0 19px}
+.simResultText{font-size:13px;color:var(--muted);line-height:1.85;padding:14px 0;border-top:1px solid var(--line)}
+.simAxisList{display:grid;gap:15px;margin:21px 0}
+.simAxis strong{font-size:13px;color:var(--deep)}.simAxis span{font-size:13px;color:var(--deep);font-weight:800}
+.simAxis .track{margin:7px 0}
+.simResultStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}
+.simResultStats span{background:#f3f6f8;padding:11px 6px;text-align:center;border-radius:9px;font-size:11px;line-height:1.7;color:#597082}
+.simResultStats b{display:block;font-size:20px;color:var(--deep)}
+.simAdvice{border-top:1px solid var(--line);padding:18px 0;margin:15px 0}
+.simAdvice strong{font-size:14px}.simAdvice p{font-size:13px;line-height:1.8;margin-top:8px}
+.simResult .endButtons{grid-template-columns:1fr 1fr}
+@media(max-width:420px){.simResult{padding:18px 14px}.simResult .endButtons{grid-template-columns:1fr}.simGrade strong{font-size:64px}.simExchange{gap:10px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.track i{transition:none}}
